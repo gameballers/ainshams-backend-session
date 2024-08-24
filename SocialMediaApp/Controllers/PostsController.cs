@@ -1,85 +1,94 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using SocialMediaApp.Models;
 using SocialMediaApp.ViewModels;
 
 namespace SocialMediaApp.Controllers
 {
 
-     [ApiController]
-     [Route("api/[controller]")]
-     public class PostsController : ControllerBase
+	[ApiController]
+	[Route("api/[controller]")]
+	public partial class PostsController : ControllerBase
      {
-          public static List<Post> _posts = new List<Post>();
+		private readonly SocialMediaContext _context;
+		public static List<Post> _posts = new List<Post>();
           private static List<Author> _authors = new List<Author>();
 
-          [HttpGet]
-          public ActionResult<List<PostViewModel>> GetAll()
+		public PostsController(SocialMediaContext context)
+		{
+			_context = context;
+		}
+
+
+		[HttpGet]
+          public async Task<ActionResult<List<PostViewModel>>> GetAll()
           {
-               var result = _posts.Select(p => new PostViewModel
-               {
-                    Id = p.Id,
-                    Title = p.Title,
-                    Content = p.Content,
-                    AuthorName = _authors.FirstOrDefault(a => a.Id == p.AuthorId)?.Name,
-                    Comments = p.Comments.Select(c => c.Content).ToList()
-               }).ToList();
+			var result = await _context.Posts.ToListAsync();
 
                return Ok(result);
           }
 
           [HttpPost]
-          public ActionResult Create([FromBody] CreatePostViewModel model)
+          public async Task<ActionResult> Create([FromBody] CreatePostViewModel model)
           {
-               var author = _authors.FirstOrDefault(a => a.Id == model.AuthorId);
-               if (author == null)
+			var newPost = new Post
                {
-                    return NotFound("Author not found");
-               }
-
-               var newPost = new Post
-               {
-                    Id = _posts.Count + 1,
                     Title = model.Title,
                     Content = model.Content,
-                    AuthorId = model.AuthorId,
-                    Author = author
+                    AuthorId = model.AuthorId
                };
 
-               _posts.Add(newPost);
-               return Ok();
+			_context.Posts.Add(newPost);
+			await _context.SaveChangesAsync();
+
+			return Ok();
           }
 
-          [HttpGet]
-          [Route("/{Id}")]
-          public ActionResult<PostViewModel> GetById([FromRoute] int Id)
+		[HttpGet("{Id}")]
+		public async Task<ActionResult<PostViewModel>> GetPostById([FromRoute] int Id)
           {
-               var result = _posts.Where(a => a.Id == Id).FirstOrDefault();
+               var result = await _context.Posts.Include(p => p.Author).Where(a => a.Id == Id).Select(p => new PostViewModel()
+               {
+                    Id = p.Id,
+                    Title = p.Title,
+                    Content= p.Content,
+                    Author= new AuthorViewModel()
+                    {
+                         Id = p.Author.Id,
+                         Name = p.Author.Name
+                    }
+               }).FirstOrDefaultAsync();
 
                return Ok(result);
           }
 
 
-          [HttpDelete]
-          [Route("/{Id}")]
-          public ActionResult Delete([FromRoute] int Id)
+		[HttpDelete("{Id}")]
+		public async Task<ActionResult> Delete([FromRoute] int Id)
           {
-               var post = _posts.Where(a => a.Id == Id).FirstOrDefault();
+               var post = await _context.Posts.Where(p => p.Id == Id).ExecuteDeleteAsync();
 
-               if (post != null)
-               {
-                    _posts.Remove(post);
-               }
                return Ok();
           }
 
-          [HttpPut]
-          [Route("/{Id}")]
-          public ActionResult Update([FromRoute] int Id, [FromBody] PostViewModel model)
-          {
-               _posts.Find(a => a.Id == Id).Content = model.Content;
 
-               return Ok();
-          }
-     }
+		[HttpPut("{id}")]
+		public async Task<IActionResult> Update(int id, [FromBody] PostViewModel updatedPost)
+		{
+			var post = await _context.Posts.FindAsync(id);
+
+			if (post == null)
+			{
+				return NotFound("Post not found");
+			}
+
+			post.Content = updatedPost.Content;
+			post.Title = updatedPost.Title;
+
+			await _context.SaveChangesAsync();
+
+			return NoContent();
+		}
+	}
 }
 

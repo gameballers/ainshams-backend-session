@@ -1,51 +1,57 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using SocialMediaApp.Models;
 using SocialMediaApp.ViewModels;
 
 namespace SocialMediaApp.Controllers
 {
 	[ApiController]
-	[Route("[controller]")]
-	public class AuthorsController : ControllerBase
+	[Route("api/[controller]")]
+	public partial class AuthorsController : ControllerBase
 	{
+		private readonly SocialMediaContext _context;
 		private static List<Author> _authors = new List<Author>();
 
-		[HttpGet]
-		public ActionResult<List<AuthorViewModel>> GetAll()
+		public AuthorsController(SocialMediaContext context)
 		{
-			var result = _authors.Select(a => new AuthorViewModel
+			_context = context;
+		}
+
+		[HttpGet]
+		public async Task<ActionResult<List<AuthorViewModel>>> GetAll()
+		{
+			var result = await _context.Authors.Select(a => new AuthorViewModel
 			{
 				Id = a.Id,
 				Name = a.Name
-			}).ToList();
+			}).ToListAsync();
 
 			return Ok(result);
 		}
 
-		[HttpGet]
-		[Route("/{Id}")]
-		public ActionResult<AuthorViewModel> GetById([FromRoute] int Id)
+		[HttpGet("{Id}")]
+		public async Task<ActionResult<AuthorViewModel>> GetAuthorById([FromRoute] int Id)
 		{
-			var result = _authors.Where(a => a.Id == Id).FirstOrDefault();
+			var result = await _context.Authors.Where(a => a.Id == Id).FirstOrDefaultAsync();
 
 			return Ok(result);
 		}
 
 		[HttpPost]
-		public ActionResult Create([FromBody] AuthorViewModel model)
+		public async Task<ActionResult> Create([FromBody] AuthorViewModel model)
 		{
 			var newAuthor = new Author
 			{
-				Id = _authors.Count + 1,
 				Name = model.Name
 			};
 
-			_authors.Add(newAuthor);
+			_context.Authors.Add(newAuthor);
+			await _context.SaveChangesAsync();
+
 			return Ok();
 		}
 
-		[HttpDelete]
-		[Route("/{Id}")]
+		[HttpDelete("{Id}")]
 		public ActionResult Delete([FromRoute] int Id)
 		{
 			var author = _authors.Where(a => a.Id == Id).FirstOrDefault();
@@ -57,8 +63,7 @@ namespace SocialMediaApp.Controllers
 			return Ok();
 		}
 
-		[HttpPut]
-		[Route("/{Id}")]
+		[HttpPut("{Id}")]
 		public ActionResult Update([FromRoute] int Id, [FromBody] AuthorViewModel model)
 		{
 			_authors.Find(a => a.Id == Id).Name = model.Name;
