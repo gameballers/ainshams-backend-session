@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using SocialMediaApp.Models;
 using SocialMediaApp.ViewModels;
 
@@ -8,10 +9,15 @@ namespace SocialMediaApp.Controllers
     [Route("api/[controller]")]
     public class CommentsController : ControllerBase
     {
+        private readonly SocialMediaContext _context;
+        public CommentsController(SocialMediaContext context)
+        {
+            _context = context;
+        }
         [HttpPost]
         public ActionResult AddComment([FromBody] CreateCommentViewModel model)
         {
-            var post = PostsController._posts.FirstOrDefault(p => p.Id == model.PostId);
+            var post = _context.Posts.FirstOrDefault(p => p.Id == model.PostId);
             if (post == null)
             {
                 return NotFound("Post not found");
@@ -19,12 +25,14 @@ namespace SocialMediaApp.Controllers
 
             var newComment = new Comment
             {
-                Id = post.Comments.Count + 1,
+              
                 PostId = model.PostId,
-                Content = model.Content
+                Content = model.Content,
+                AuthorId = model.AuthorId
             };
 
-            post.Comments.Add(newComment);
+           _context.Comments.Add(newComment);
+            _context.SaveChanges();
             return Ok();
         }
     }

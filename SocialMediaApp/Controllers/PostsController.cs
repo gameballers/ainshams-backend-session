@@ -23,12 +23,42 @@ namespace SocialMediaApp.Controllers
 		[HttpGet]
           public async Task<ActionResult<List<PostViewModel>>> GetAll()
           {
-			var result = await _context.Posts.ToListAsync();
+            var result = await _context.Posts.Include(p => p.Author).Include(p => p.Comments).Select(p => new PostViewModel()
+            {
+                Id = p.Id,
+                Title = p.Title,
+                Content = p.Content,
+                Author = new AuthorViewModel()
+                {
+                    Id = p.Author.Id,
+                    Name = p.Author.Name
+                },
+                Comments = p.Comments.Select(p => p.Content).ToList()
+            }).FirstOrDefaultAsync();
 
-               return Ok(result);
+
+            return Ok(result);
           }
+        [HttpGet("Author/{authorId}")]
+        public async Task<ActionResult<List<PostViewModel>>> GetAll(int authorId)
+        {
+            var result = await _context.Posts.Include(p => p.Author).Include(p => p.Comments).Where(p => p.AuthorId == authorId).Select(p => new PostViewModel()
+            {
+                Id = p.Id,
+                Title = p.Title,
+                Content = p.Content,
+                Author = new AuthorViewModel()
+                {
+                    Id = p.Author.Id,
+                    Name = p.Author.Name
+                },
+                Comments = p.Comments.Select(p => p.Content).ToList()
+            }).FirstOrDefaultAsync();
 
-          [HttpPost]
+
+            return Ok(result);
+        }
+        [HttpPost]
           public async Task<ActionResult> Create([FromBody] CreatePostViewModel model)
           {
 			var newPost = new Post
@@ -47,7 +77,7 @@ namespace SocialMediaApp.Controllers
 		[HttpGet("{Id}")]
 		public async Task<ActionResult<PostViewModel>> GetPostById([FromRoute] int Id)
           {
-               var result = await _context.Posts.Include(p => p.Author).Where(a => a.Id == Id).Select(p => new PostViewModel()
+               var result = await _context.Posts.Include(p => p.Author).Include(p => p.Comments).Where(a => a.Id == Id).Select(p => new PostViewModel()
                {
                     Id = p.Id,
                     Title = p.Title,
@@ -56,7 +86,8 @@ namespace SocialMediaApp.Controllers
                     {
                          Id = p.Author.Id,
                          Name = p.Author.Name
-                    }
+                    },
+                   Comments = p.Comments.Select(p => p.Content).ToList()
                }).FirstOrDefaultAsync();
 
                return Ok(result);
