@@ -14,6 +14,7 @@ namespace SocialMediaApp.Controllers
         {
             _context = context;
         }
+
         [HttpPost]
         public ActionResult AddComment([FromBody] CreateCommentViewModel model)
         {

@@ -10,7 +10,6 @@ namespace SocialMediaApp.Controllers
 	public partial class AuthorsController : ControllerBase
 	{
 		private readonly SocialMediaContext _context;
-		private static List<Author> _authors = new List<Author>();
 
 		public AuthorsController(SocialMediaContext context)
 		{
@@ -34,6 +33,11 @@ namespace SocialMediaApp.Controllers
 		{
 			var result = await _context.Authors.Where(a => a.Id == Id).FirstOrDefaultAsync();
 
+			if(result == null)
+			{
+				return NotFound("Author not found");
+			}
+
 			return Ok(result);
 		}
 
@@ -47,26 +51,6 @@ namespace SocialMediaApp.Controllers
 
 			_context.Authors.Add(newAuthor);
 			await _context.SaveChangesAsync();
-
-			return Ok();
-		}
-
-		[HttpDelete("{Id}")]
-		public ActionResult Delete([FromRoute] int Id)
-		{
-			var author = _authors.Where(a => a.Id == Id).FirstOrDefault();
-
-			if (author != null)
-			{
-				_authors.Remove(author);
-			}
-			return Ok();
-		}
-
-		[HttpPut("{Id}")]
-		public ActionResult Update([FromRoute] int Id, [FromBody] AuthorViewModel model)
-		{
-			_authors.Find(a => a.Id == Id).Name = model.Name;
 
 			return Ok();
 		}
