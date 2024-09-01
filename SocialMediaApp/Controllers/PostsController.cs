@@ -34,7 +34,7 @@ namespace SocialMediaApp.Controllers
                     Name = p.Author.Name
                 },
                 Comments = p.Comments.Select(p => p.Content).ToList()
-            }).FirstOrDefaultAsync();
+            }).ToListAsync();
 
 
             return Ok(result);
